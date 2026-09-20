@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="overflow-x-hidden">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>نظام تكاليف مدرج 406 | المجموعة 6</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Supabase Client Library -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { font-family: 'Cairo', sans-serif; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* التوهج والألوان البارزة للتكاليف في واجهة الطالب */
+    .glow-sheet {
+      box-shadow: 0 0 16px rgba(245, 158, 11, 0.25);
+      border-color: #f59e0b !important;
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, #0d1527 100%) !important;
+    }
+    .glow-research {
+      box-shadow: 0 0 16px rgba(168, 85, 247, 0.25);
+      border-color: #a855f7 !important;
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.12) 0%, #0d1527 100%) !important;
+    }
+    .glow-summary {
+      box-shadow: 0 0 16px rgba(14, 165, 233, 0.25);
+      border-color: #0ea5e9 !important;
+      background: linear-gradient(135deg, rgba(14, 165, 233, 0.12) 0%, #0d1527 100%) !important;
+    }
+    .glow-exam {
+      box-shadow: 0 0 18px rgba(244, 63, 94, 0.35);
+      border-color: #f43f5e !important;
+      background: linear-gradient(135deg, rgba(244, 63, 94, 0.15) 0%, #0d1527 100%) !important;
+      animation: pulseExam 2s infinite alternate;
+    }
+    @keyframes pulseExam {
+      from { box-shadow: 0 0 8px rgba(244, 63, 94, 0.2); }
+      to { box-shadow: 0 0 18px rgba(244, 63, 94, 0.45); }
+    }
+  </style>
+</head>
+<body class="bg-[#080d1a] text-slate-100 min-h-screen select-none pb-14">
+
+  <!-- الشريط العلوي المشترك -->
+  <header class="bg-[#0f172a] border-b border-slate-800 sticky top-0 z-40 px-3 py-2.5 shadow-md w-full">
+    <div class="max-w-4xl mx-auto flex items-center justify-between">
+      <button type="button" onclick="handleAdminToggle()" id="adminToggleBtn" class="flex items-center gap-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-90 text-white text-xs px-3.5 py-1.5 rounded-xl font-bold shadow transition cursor-pointer">
+        <span id="adminBtnIcon">🔐</span>
+        <span id="adminBtnText">لوحة التحكم (للمسؤول)</span>
+      </button>
+
+      <div class="flex items-center gap-2">
+        <span id="serverStatusBadge" class="inline-flex items-center gap-1 bg-emerald-950 border border-emerald-500/40 text-emerald-400 text-[10px] px-2.5 py-0.5 rounded-full font-bold">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          سحابي متصل
+        </span>
+        <div class="text-right">
+          <h1 class="font-black text-xs text-indigo-400">HALL 406 | 🎓</h1>
+          <p class="text-[9px] text-slate-400 font-bold -mt-0.5">GROUP 6</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= 1. واجهة الطالب ================= -->
+  <div id="studentView" class="w-full max-w-md mx-auto px-3 mt-3 space-y-3">
+
+    <!-- الإحصائيات الأربعة -->
+    <div class="grid grid-cols-2 gap-2">
+      <div class="bg-[#121a2d] border border-slate-800 p-2.5 rounded-xl flex flex-col items-center justify-center text-center">
+        <span class="text-lg">📋</span>
+        <span class="text-[10px] text-slate-400 font-bold mt-0.5">إجمالي التكاليف</span>
+        <span id="statTotal" class="text-base font-black text-white">0</span>
+      </div>
+      <div class="bg-[#121a2d] border border-slate-800 p-2.5 rounded-xl flex flex-col items-center justify-center text-center">
+        <span class="text-lg">🔬</span>
+        <span class="text-[10px] text-purple-400 font-bold mt-0.5">الأبحاث والمشاريع</span>
+        <span id="statResearch" class="text-base font-black text-purple-300">0</span>
+      </div>
+      <div class="bg-[#121a2d] border border-slate-800 p-2.5 rounded-xl flex flex-col items-center justify-center text-center">
+        <span class="text-lg">📚</span>
+        <span class="text-[10px] text-sky-400 font-bold mt-0.5">الملخصات</span>
+        <span id="statSummaries" class="text-base font-black text-sky-300">0</span>
+      </div>
+      <div class="bg-[#121a2d] border border-slate-800 p-2.5 rounded-xl flex flex-col items-center justify-center text-center">
+        <span class="text-lg">📁</span>
+        <span class="text-[10px] text-amber-400 font-bold mt-0.5">الملفات والشيتات</span>
+        <span id="statSheets" class="text-base font-black text-amber-300">0</span>
+      </div>
+    </div>
+
+    <!-- بوكس اختيار الأسبوع -->
+    <div class="bg-[#121a2d] border border-slate-800 p-3 rounded-xl space-y-2">
+      <div class="flex items-center justify-between text-[11px]">
+        <span class="font-bold text-slate-200">📅 اختيار الأسبوع الدراسي:</span>
+        <span class="text-[9px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full font-bold">14 أسبوع دراسي</span>
+      </div>
+      <div class="bg-[#0a1122] border border-slate-800 rounded-lg p-2.5 flex items-center justify-between">
+        <div class="min-w-0 pr-1">
+          <h3 id="currentWeekTitle" class="text-xs font-black text-white truncate">الأسبوع الأول</h3>
+          <p id="currentWeekDates" class="text-[10px] text-slate-400 font-mono mt-0.5">الأحد 20/09 - الإثنين 21/09</p>
+        </div>
+        <button type="button" onclick="openWeekModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] px-3 py-1.5 rounded-lg font-bold flex items-center gap-1 transition cursor-pointer">
+          <span>تغيير</span>
+          <span>▾</span>
+        </button>
+      </div>
+      <div id="quickWeeksBar" class="flex gap-1.5 overflow-x-auto no-scrollbar pt-0.5"></div>
+    </div>
+
+    <!-- شريط تصفية التكاليف -->
+    <div class="bg-[#121a2d] border border-slate-800 p-2.5 rounded-xl space-y-1.5">
+      <span class="text-[11px] font-bold text-slate-300 block">🏷️ تصفية التكاليف:</span>
+      <div class="flex gap-1 overflow-x-auto no-scrollbar text-[10px] font-bold">
+        <button type="button" onclick="setFilter('all')" id="flt-all" class="px-2.5 py-1 rounded-lg bg-indigo-600 text-white whitespace-nowrap cursor-pointer">الكل</button>
+        <button type="button" onclick="setFilter('شيت')" id="flt-شيت" class="px-2.5 py-1 rounded-lg bg-slate-800 text-amber-400 border border-amber-500/30 whitespace-nowrap cursor-pointer">شيتات 📝</button>
+        <button type="button" onclick="setFilter('بحث')" id="flt-بحث" class="px-2.5 py-1 rounded-lg bg-slate-800 text-purple-400 border border-purple-500/30 whitespace-nowrap cursor-pointer">أبحاث 🔬</button>
+        <button type="button" onclick="setFilter('ملخص')" id="flt-ملخص" class="px-2.5 py-1 rounded-lg bg-slate-800 text-sky-400 border border-sky-500/30 whitespace-nowrap cursor-pointer">ملخصات 📚</button>
+        <button type="button" onclick="setFilter('امتحان')" id="flt-امتحان" class="px-2.5 py-1 rounded-lg bg-slate-800 text-rose-400 border border-rose-500/30 whitespace-nowrap cursor-pointer">امتحانات 📑</button>
+      </div>
+    </div>
+
+    <!-- كارت محاضرات الأحد -->
+    <div class="bg-[#121a2d] border border-slate-800 rounded-xl overflow-hidden">
+      <div class="bg-[#19243d] px-3 py-2 flex items-center justify-between border-b border-slate-800">
+        <div class="flex items-center gap-1.5">
+          <span class="bg-purple-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded uppercase">SUN</span>
+          <span class="text-[11px] font-bold text-slate-100">تكاليف محاضرات الأحد</span>
+        </div>
+        <span id="sunDateText" class="text-[10px] text-slate-400 font-mono font-bold">(20/9/2026)</span>
+      </div>
+      <div id="sunContainer" class="p-2.5 space-y-2"></div>
+    </div>
+
+    <!-- كارت محاضرات الاثنين -->
+    <div class="bg-[#121a2d] border border-slate-800 rounded-xl overflow-hidden">
+      <div class="bg-[#19243d] px-3 py-2 flex items-center justify-between border-b border-slate-800">
+        <div class="flex items-center gap-1.5">
+          <span class="bg-blue-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded uppercase">MON</span>
+          <span class="text-[11px] font-bold text-slate-100">تكاليف محاضرات الإثنين</span>
+        </div>
+        <span id="monDateText" class="text-[10px] text-slate-400 font-mono font-bold">(21/9/2026)</span>
+      </div>
+      <div id="monContainer" class="p-2.5 space-y-2"></div>
+    </div>
+
+  </div>
+
+  <!-- ================= 2. لوحة تحكم المسؤول ================= -->
+  <div id="adminView" class="hidden w-full max-w-4xl mx-auto px-2 md:px-4 mt-3">
+    <div class="bg-white text-slate-800 rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
+
+      <div class="bg-[#102a45] text-white px-4 py-3 flex items-center justify-between border-b border-slate-700">
+        <div class="flex items-center gap-2">
+          <span class="text-lg">⚙️</span>
+          <h2 class="text-sm md:text-base font-black tracking-wide">لوحة التحكم (للمسؤول) - متصل بـ Supabase</h2>
+        </div>
+        <button type="button" onclick="switchToStudentView()" class="text-[11px] bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg font-bold transition cursor-pointer">
+          العودة لعرض الطالب 🌐
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-12 min-h-[540px]">
+
+        <!-- القائمة الجانبية -->
+        <aside class="md:col-span-3 bg-[#0d1f33] text-slate-300 p-3.5 flex flex-col justify-between border-l border-slate-800">
+          <div>
+            <div class="pb-3 mb-3 border-b border-slate-800 text-center">
+              <h3 class="text-xs font-black text-white">لوحة الإدارة</h3>
+            </div>
+            <nav class="space-y-1 text-xs font-bold">
+              <button type="button" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-400 hover:bg-slate-800/60 transition">
+                <span>🏠</span>
+                <span>الرئيسية</span>
+              </button>
+              <button type="button" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-[#1e5bb8] text-white shadow">
+                <span>📄</span>
+                <span>التكاليف</span>
+              </button>
+              <button type="button" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-400 hover:bg-slate-800/60 transition">
+                <span>👥</span>
+                <span>الحضور والغياب</span>
+              </button>
+              <button type="button" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-400 hover:bg-slate-800/60 transition">
+                <span>🔬</span>
+                <span>الأبحاث</span>
+              </button>
+              <button type="button" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-400 hover:bg-slate-800/60 transition">
+                <span>📚</span>
+                <span>الملخصات</span>
+              </button>
+              <button type="button" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-400 hover:bg-slate-800/60 transition">
+                <span>📁</span>
+                <span>الملفات</span>
+              </button>
+              <button type="button" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-400 hover:bg-slate-800/60 transition">
+                <span>🧑‍🎓</span>
+                <span>الطلاب</span>
+              </button>
+            </nav>
+          </div>
+          <div class="pt-3 border-t border-slate-800 text-xs font-bold">
+            <button type="button" class="w-full flex items-center gap-2 px-3 py-1.5 rounded-xl text-slate-400 hover:bg-slate-800/60 transition">
+              <span>⚙️</span>
+              <span>الإعدادات</span>
+            </button>
+          </div>
+        </aside>
+
+        <!-- مساحة العمل الرئيسية -->
+        <main class="md:col-span-9 p-4 md:p-5 bg-[#f8fafc]">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+            <!-- نموذج إضافة وتحديث تكليف -->
+            <div class="lg:col-span-8 bg-white p-4 md:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3.5">
+              <div class="flex items-center gap-2 border-b border-slate-100 pb-2.5">
+                <span class="text-blue-600 font-black text-base">➕</span>
+                <h3 class="font-black text-xs md:text-sm text-slate-800">إضافة وتحديث تكليف على السيرفر</h3>
+              </div>
+
+              <div class="space-y-1">
+                <label class="block text-[11px] font-bold text-slate-500">التاريخ:</label>
+                <input id="adminTaskDate" type="date" value="2026-09-20" class="w-full bg-[#f8fafc] border border-slate-200 rounded-xl py-2 px-3 text-xs font-bold text-slate-700 outline-none focus:border-blue-500">
+              </div>
+
+              <div class="grid grid-cols-12 gap-2">
+                <div class="col-span-8 space-y-1">
+                  <label class="block text-[11px] font-bold text-slate-500">المحاضرة:</label>
+                  <select id="adminTaskSubject" onchange="syncAdminSubjectTime()" class="w-full bg-[#f8fafc] border border-slate-200 rounded-xl py-2 px-2.5 text-xs font-bold text-slate-700 outline-none focus:border-blue-500">
+                    <optgroup label="محاضرات الأحد">
+                      <option value="s1" data-time="09:11">مشروع بحثي</option>
+                      <option value="s2" data-time="11:01">سياسات رعاية</option>
+                      <option value="s3" data-time="01:03">تنظيم مجتمعات</option>
+                    </optgroup>
+                    <optgroup label="محاضرات الإثنين">
+                      <option value="m1" data-time="09:11">خدمة أفراد</option>
+                      <option value="m2" data-time="11:01">خدمة جماعات</option>
+                      <option value="m3" data-time="01:03">مجال طبي</option>
+                    </optgroup>
+                  </select>
+                </div>
+                <div class="col-span-4 space-y-1">
+                  <label class="block text-[11px] font-bold text-slate-500">التوقيت:</label>
+                  <input id="adminLectureTime" type="text" value="09:11" readonly class="w-full bg-slate-100 border border-slate-200 rounded-xl py-2 px-2 text-xs font-mono font-bold text-center text-slate-600">
+                </div>
+              </div>
+
+              <div class="space-y-1">
+                <label class="block text-[11px] font-bold text-slate-500">نوع التكليف:</label>
+                <select id="adminTaskType" class="w-full bg-[#f8fafc] border border-slate-200 rounded-xl py-2 px-2.5 text-xs font-bold text-slate-700 outline-none focus:border-blue-500">
+                  <option value="بحث">بحث ومشاريع 🔬</option>
+                  <option value="شيت">تسليم شيت 📝</option>
+                  <option value="ملخص">ملخص محاضرة 📚</option>
+                  <option value="امتحان">امتحان / كويز 📑</option>
+                  <option value="none">بدون تكليف مسجل</option>
+                </select>
+              </div>
+
+              <div class="space-y-1">
+                <label class="block text-[11px] font-bold text-slate-500">وصف التكليف:</label>
+                <textarea id="adminTaskDesc" rows="2" placeholder="إعداد بحث عن ..." class="w-full bg-[#f8fafc] border border-slate-200 rounded-xl p-2.5 text-xs font-semibold text-slate-700 outline-none focus:border-blue-500 leading-relaxed"></textarea>
+              </div>
+
+              <button type="button" onclick="saveAdminTaskToSupabase()" id="saveSupabaseBtn" class="w-full bg-[#2563eb] hover:bg-blue-700 text-white font-black py-2.5 rounded-xl transition text-xs shadow-md flex items-center justify-center gap-2 cursor-pointer">
+                <span>نشر التكليف لسيرفر Supabase</span>
+                <span>✈️</span>
+              </button>
+            </div>
+
+            <!-- أزرار الإدارة -->
+            <div class="lg:col-span-4 flex flex-col gap-2.5">
+              <h4 class="text-xs font-black text-slate-600 px-1">إدارة التكاليف</h4>
+              <button type="button" onclick="resetAdminForm()" class="w-full bg-[#10b981] hover:bg-emerald-600 text-white text-xs font-bold py-2.5 px-3 rounded-xl transition shadow flex items-center justify-center gap-2 cursor-pointer">
+                <span>➕</span>
+                <span>إضافة تكليف جديد</span>
+              </button>
+              <button type="button" onclick="deleteAdminTaskFromSupabase()" class="w-full bg-[#ef4444] hover:bg-rose-600 text-white text-xs font-bold py-2.5 px-3 rounded-xl transition shadow flex items-center justify-center gap-2 cursor-pointer">
+                <span>🗑️</span>
+                <span>حذف من السيرفر</span>
+              </button>
+              <div class="mt-3 bg-white p-3 rounded-xl border border-slate-200 text-slate-600 space-y-1 text-xs">
+                <span class="font-black text-slate-800 block text-[11px]">حالة السيرفر:</span>
+                <p class="text-[10px] text-slate-500 leading-relaxed">البيانات متصلة بقاعدة بيانات PostgreSQL على Supabase ومزامنة مع جميع الطلاب فوراً.</p>
+              </div>
+            </div>
+
+          </div>
+        </main>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- نافذة الأسابيع المنبثقة -->
+  <div id="weekModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
+    <div class="bg-[#121a2d] border border-slate-800 text-slate-100 w-full max-w-md rounded-t-2xl sm:rounded-2xl max-h-[85vh] flex flex-col shadow-2xl">
+      <div class="p-3 border-b border-slate-800 flex items-center justify-between">
+        <div>
+          <h3 class="font-black text-xs text-white">اختر الأسبوع الدراسي 📅</h3>
+          <p class="text-[9px] text-slate-400">الفترة الأكاديمية: 20 سبتمبر إلى 20 ديسمبر 2026</p>
+        </div>
+        <button type="button" onclick="closeWeekModal()" class="w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 text-xs cursor-pointer">✕</button>
+      </div>
+      <div id="weekListOptions" class="p-2.5 overflow-y-auto space-y-1.5 max-h-[65vh]"></div>
+    </div>
+  </div>
+
+  <!-- نافذة تسجيل الدخول (كلمة السر 406) -->
+  <div id="loginModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-[#162035] border border-slate-700 text-slate-100 w-full max-w-xs rounded-2xl p-4 shadow-2xl text-center space-y-3">
+      <h3 class="text-sm font-black text-white">دخول المسؤول</h3>
+      <p class="text-[10px] text-slate-400">أدخل الرمز السري للانتقال إلى لوحة السيرفر</p>
+      <input id="adminPassInput" type="password" placeholder="أدخل (406)" class="w-full bg-[#0a1122] border border-slate-700 text-white rounded-lg p-2 text-xs outline-none tracking-widest text-center font-bold">
+      <div class="flex gap-2 pt-1">
+        <button type="button" onclick="verifyAdminPass()" class="flex-1 bg-blue-600 text-white font-bold py-2 rounded-lg text-xs cursor-pointer">دخول 🚀</button>
+        <button type="button" onclick="closeLoginModal()" class="flex-1 bg-slate-800 text-slate-300 font-bold py-2 rounded-lg text-xs cursor-pointer">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // بيانات الربط بـ Supabase
+    const SUPABASE_URL = "https://iljcksacliwyxujozbiu.supabase.co";
+    const SUPABASE_KEY = "Sb_publishable_BSQHuX9gt4_69_AeCkgdVQ_ZYc-Fdvl";
+
+    // تهيئة العميل باسم فريد لتجنب أي تعارض في المتغيرات العامة
+    let supabaseClient = null;
+    try {
+      if (window.supabase && typeof window.supabase.createClient === 'function') {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      }
+    } catch (e) {
+      console.warn("Supabase init warning:", e);
+    }
+
+    const weeks = [
+      { id: 1, title: "الأسبوع الأول", sun: "20/09", mon: "21/09" },
+      { id: 2, title: "الأسبوع الثاني", sun: "27/09", mon: "28/09" },
+      { id: 3, title: "الأسبوع الثالث", sun: "04/10", mon: "05/10" },
+      { id: 4, title: "الأسبوع الرابع", sun: "11/10", mon: "12/10" },
+      { id: 5, title: "الأسبوع الخامس", sun: "18/10", mon: "19/10" },
+      { id: 6, title: "الأسبوع السادس", sun: "25/10", mon: "26/10" },
+      { id: 7, title: "الأسبوع السابع", sun: "01/11", mon: "02/11" },
+      { id: 8, title: "الأسبوع الثامن", sun: "08/11", mon: "09/11" },
+      { id: 9, title: "الأسبوع التاسع", sun: "15/11", mon: "16/11" },
+      { id: 10, title: "الأسبوع العاشر", sun: "22/11", mon: "23/11" },
+      { id: 11, title: "الأسبوع الحادي عشر", sun: "29/11", mon: "30/11" },
+      { id: 12, title: "الأسبوع الثاني عشر", sun: "06/12", mon: "07/12" },
+      { id: 13, title: "الأسبوع الثالث عشر", sun: "13/12", mon: "14/12" },
+      { id: 14, title: "الأسبوع الرابع عشر (الأخير)", sun: "20/12", mon: "--/--" }
+    ];
+
+    const subjects = {
+      sun: [
+        { id: "s1", name: "مشروع بحثي", time: "09:11" },
+        { id: "s2", name: "سياسات رعاية", time: "11:01" },
+        { id: "s3", name: "تنظيم مجتمعات", time: "01:03" }
+      ],
+      mon: [
+        { id: "m1", name: "خدمة أفراد", time: "09:11" },
+        { id: "m2", name: "خدمة جماعات", time: "11:01" },
+        { id: "m3", name: "مجال طبي", time: "01:03" }
+      ]
+    };
+
+    let selectedWeek = 1;
+    let activeFilter = 'all';
+    let isAdminAuth = sessionStorage.getItem("h406_admin_auth") === "true";
+    let tasksDB = JSON.parse(localStorage.getItem('h406_tasks_db')) || {};
+
+    const taskStyles = {
+      'شيت': { cardClass: 'glow-sheet border-r-4 border-r-amber-400', badgeClass: 'bg-amber-400 text-slate-950 font-black', textClass: 'text-amber-100 font-bold', icon: '📝' },
+      'بحث': { cardClass: 'glow-research border-r-4 border-r-purple-400', badgeClass: 'bg-purple-400 text-slate-950 font-black', textClass: 'text-purple-100 font-bold', icon: '🔬' },
+      'ملخص': { cardClass: 'glow-summary border-r-4 border-r-sky-400', badgeClass: 'bg-sky-400 text-slate-950 font-black', textClass: 'text-sky-100 font-bold', icon: '📚' },
+      'امتحان': { cardClass: 'glow-exam border-r-4 border-r-rose-400', badgeClass: 'bg-rose-500 text-white font-black', textClass: 'text-rose-100 font-black', icon: '🚨' },
+      'none': { cardClass: 'bg-[#0a1122]/60 border border-slate-800/80', badgeClass: 'bg-slate-800 border border-slate-700 text-slate-500 font-bold', textClass: 'text-slate-500 text-[11px]', icon: '📄' }
+    };
+
+    function init() {
+      renderQuickWeeks();
+      renderWeekModalList();
+      syncAdminSubjectTime();
+      loadStudentView();
+      fetchTasksFromSupabase();
+    }
+
+    async function fetchTasksFromSupabase() {
+      if (!supabaseClient) return;
+      try {
+        const { data, error } = await supabaseClient.from('tasks').select('*');
+        if (!error && data) {
+          tasksDB = {};
+          data.forEach(item => {
+            tasksDB[item.key] = { type: item.type, desc: item.description, date: item.date };
+          });
+          localStorage.setItem('h406_tasks_db', JSON.stringify(tasksDB));
+          loadStudentView();
+        }
+      } catch (err) {
+        console.warn("استخدام الذاكرة المحلية كبديل:", err);
+      }
+    }
+
+    async function saveAdminTaskToSupabase() {
+      const subjectKey = document.getElementById("adminTaskSubject").value;
+      const type = document.getElementById("adminTaskType").value;
+      const desc = document.getElementById("adminTaskDesc").value.trim();
+      const date = document.getElementById("adminTaskDate").value;
+      const key = `w${selectedWeek}_${subjectKey}`;
+
+      const btn = document.getElementById("saveSupabaseBtn");
+      btn.innerText = "جاري الحفظ على السيرفر...";
+      btn.disabled = true;
+
+      // حفظ فوري محلياً لضمان سرعة الاستجابة
+      tasksDB[key] = { type, desc, date };
+      localStorage.setItem('h406_tasks_db', JSON.stringify(tasksDB));
+      loadStudentView();
+
+      if (supabaseClient) {
+        try {
+          const { error } = await supabaseClient.from('tasks').upsert({
+            key: key,
+            type: type,
+            description: desc,
+            date: date
+          });
+
+          if (!error) {
+            alert("✅ تم نشر التكليف بنجاح على السيرفر ومزامنته للطلاب!");
+          } else {
+            alert("تم الحفظ محلياً فقط. تنبيه السيرفر: " + error.message);
+          }
+        } catch (err) {
+          alert("تم الحفظ محلياً (تعذر الاتصال بالسيرفر حالياً).");
+        }
+      } else {
+        alert("تم الحفظ في المتصفح محلياً.");
+      }
+
+      btn.innerHTML = `<span>نشر التكليف لسيرفر Supabase</span><span>✈️</span>`;
+      btn.disabled = false;
+    }
+
+    async function deleteAdminTaskFromSupabase() {
+      const subjectKey = document.getElementById("adminTaskSubject").value;
+      const key = `w${selectedWeek}_${subjectKey}`;
+
+      if (confirm("هل تريد بالتأكيد حذف هذا التكليف؟")) {
+        delete tasksDB[key];
+        localStorage.setItem('h406_tasks_db', JSON.stringify(tasksDB));
+        document.getElementById("adminTaskDesc").value = "";
+        document.getElementById("adminTaskType").value = "none";
+        loadStudentView();
+
+        if (supabaseClient) {
+          try {
+            await supabaseClient.from('tasks').delete().eq('key', key);
+          } catch (e) {
+            console.warn(e);
+          }
+        }
+        alert("🗑️ تم حذف التكليف.");
+      }
+    }
+
+    function renderQuickWeeks() {
+      const bar = document.getElementById("quickWeeksBar");
+      if (!bar) return;
+      bar.innerHTML = weeks.map(w => `
+        <button type="button" onclick="selectWeek(${w.id})" class="px-2.5 py-1 rounded-lg text-[10px] font-bold whitespace-nowrap transition cursor-pointer ${w.id === selectedWeek ? 'bg-indigo-600 text-white shadow' : 'bg-slate-800/80 text-slate-400'}">
+          ${w.title}
+        </button>
+      `).join('');
+    }
+
+    function renderWeekModalList() {
+      const container = document.getElementById("weekListOptions");
+      if (!container) return;
+      container.innerHTML = weeks.map(w => `
+        <div onclick="selectWeek(${w.id}); closeWeekModal();" class="p-2.5 rounded-xl border cursor-pointer transition flex items-center justify-between ${w.id === selectedWeek ? 'bg-indigo-950/70 border-indigo-500 text-white' : 'bg-[#0a1122] border-slate-800 text-slate-300'}">
+          <div>
+            <h4 class="text-[11px] font-black ${w.id === selectedWeek ? 'text-indigo-300' : ''}">${w.title}</h4>
+            <p class="text-[10px] text-slate-400 font-mono mt-0.5">${w.id === 14 ? 'الأحد 20/12/2026 (نهاية التكاليف)' : `الأحد ${w.sun} - الإثنين ${w.mon}`}</p>
+          </div>
+          ${w.id === selectedWeek ? '<span class="text-indigo-400 text-xs font-bold">✓</span>' : ''}
+        </div>
+      `).join('');
+    }
+
+    function selectWeek(weekId) {
+      selectedWeek = weekId;
+      const w = weeks.find(item => item.id === weekId);
+      if (!w) return;
+      document.getElementById("currentWeekTitle").innerText = w.title;
+      document.getElementById("currentWeekDates").innerText = w.id === 14 ? 'الأحد 20/12/2026' : `الأحد ${w.sun} - الإثنين ${w.mon}`;
+      document.getElementById("sunDateText").innerText = `(${w.sun}/2026)`;
+      document.getElementById("monDateText").innerText = w.mon === '--/--' ? '(نهاية الفترة 20/12)' : `(${w.mon}/2026)`;
+
+      renderQuickWeeks();
+      renderWeekModalList();
+      loadStudentView();
+    }
+
+    function setFilter(type) {
+      activeFilter = type;
+      ['all', 'شيت', 'بحث', 'ملخص', 'امتحان'].forEach(t => {
+        const btn = document.getElementById(`flt-${t}`);
+        if (!btn) return;
+        if (t === type) {
+          btn.className = "px-2.5 py-1 rounded-lg bg-indigo-600 text-white whitespace-nowrap cursor-pointer";
+        } else {
+          btn.className = "px-2.5 py-1 rounded-lg bg-slate-800 text-slate-400 whitespace-nowrap cursor-pointer";
+        }
+      });
+      loadStudentView();
+    }
+
+    function loadStudentView() {
+      renderCards("sun", "sunContainer");
+      renderCards("mon", "monContainer");
+      updateStats();
+    }
+
+    function renderCards(day, containerId) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      container.innerHTML = "";
+
+      if (selectedWeek === 14 && day === "mon") {
+        container.innerHTML = `<div class="p-2 text-center text-[11px] text-slate-400 bg-[#0a1122] rounded-lg border border-slate-800">انتهت فترة المحاضرات والتكاليف يوم الأحد 20/12/2026.</div>`;
+        return;
+      }
+
+      subjects[day].forEach(sub => {
+        const key = `w${selectedWeek}_${sub.id}`;
+        const item = tasksDB[key] || { type: 'none', desc: '' };
+
+        if (activeFilter !== 'all' && item.type !== activeFilter) return;
+
+        const hasActiveTask = (item.type !== 'none' && item.desc && item.desc.trim() !== '');
+        const currentStyle = hasActiveTask ? (taskStyles[item.type] || taskStyles['none']) : taskStyles['none'];
+
+        const badgeLabel = hasActiveTask ? `${currentStyle.icon} ${item.type}` : 'لا يوجد تكليف';
+        const textContent = hasActiveTask ? item.desc : 'لا يوجد تكليف مسجل لهذه المحاضرة في هذا الأسبوع.';
+
+        const card = document.createElement("div");
+        card.className = `rounded-xl p-3 flex flex-col gap-1.5 transition ${currentStyle.cardClass}`;
+        card.innerHTML = `
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs font-black ${hasActiveTask ? 'text-white' : 'text-slate-300'}">${sub.name}</span>
+              <span class="text-[9px] text-slate-400 font-mono">${sub.time}</span>
+            </div>
+            <div class="flex items-center gap-1">
+              <span class="text-[9px] px-2 py-0.5 rounded-full ${currentStyle.badgeClass}">
+                ${badgeLabel}
+              </span>
+            </div>
+          </div>
+          <p class="${currentStyle.textClass} text-xs leading-relaxed break-words">${textContent}</p>
+        `;
+        container.appendChild(card);
+      });
+
+      if (container.children.length === 0) {
+        container.innerHTML = `<p class="text-center text-[10px] text-slate-500 py-2">لا توجد تكليفات مطابقة للتصفية.</p>`;
+      }
+    }
+
+    function updateStats() {
+      let total = 0, research = 0, summaries = 0, sheets = 0;
+      Object.values(tasksDB).forEach(t => {
+        if (t && t.type !== 'none' && t.desc && t.desc.trim() !== '') {
+          total++;
+          if (t.type === 'بحث') research++;
+          if (t.type === 'ملخص') summaries++;
+          if (t.type === 'شيت') sheets++;
+        }
+      });
+      document.getElementById("statTotal").innerText = total;
+      document.getElementById("statResearch").innerText = research;
+      document.getElementById("statSummaries").innerText = summaries;
+      document.getElementById("statSheets").innerText = sheets;
+    }
+
+    function syncAdminSubjectTime() {
+      const select = document.getElementById("adminTaskSubject");
+      if (!select) return;
+      const opt = select.options[select.selectedIndex];
+      document.getElementById("adminLectureTime").value = opt.getAttribute("data-time") || "09:11";
+    }
+
+    function handleAdminToggle() {
+      const adminView = document.getElementById("adminView");
+      if (adminView.classList.contains("hidden")) {
+        if (isAdminAuth) {
+          switchToAdminView();
+        } else {
+          document.getElementById("loginModal").classList.remove("hidden");
+        }
+      } else {
+        switchToStudentView();
+      }
+    }
+
+    function closeLoginModal() {
+      document.getElementById("loginModal").classList.add("hidden");
+    }
+
+    function verifyAdminPass() {
+      const input = document.getElementById("adminPassInput");
+      if (input.value.trim() === "406") {
+        isAdminAuth = true;
+        sessionStorage.setItem("h406_admin_auth", "true");
+        closeLoginModal();
+        input.value = "";
+        switchToAdminView();
+      } else {
+        alert("❌ كلمة السر غير صحيحة! كلمة السر هي: 406");
+      }
+    }
+
+    function switchToAdminView() {
+      document.getElementById("studentView").classList.add("hidden");
+      document.getElementById("adminView").classList.remove("hidden");
+      document.getElementById("adminBtnIcon").innerText = "🌐";
+      document.getElementById("adminBtnText").innerText = "واجهة الطالب";
+    }
+
+    function switchToStudentView() {
+      document.getElementById("adminView").classList.add("hidden");
+      document.getElementById("studentView").classList.remove("hidden");
+      document.getElementById("adminBtnIcon").innerText = "🔐";
+      document.getElementById("adminBtnText").innerText = "لوحة التحكم (للمسؤول)";
+      loadStudentView();
+    }
+
+    function resetAdminForm() {
+      document.getElementById("adminTaskDesc").value = "";
+      document.getElementById("adminTaskType").value = "بحث";
+    }
+
+    function openWeekModal() {
+      document.getElementById("weekModal").classList.remove("hidden");
+    }
+
+    function closeWeekModal() {
+      document.getElementById("weekModal").classList.add("hidden");
+    }
+
+    // التشغيل المبدئي فور اكتمال تحميل الصفحة
+    window.addEventListener("DOMContentLoaded", init);
+  </script>
+</body>
+</html>
